@@ -1,0 +1,34 @@
+# Environments & Secrets (CRITICAL: Do NOT commit secrets to GitHub)
+.env
+.env.*
+!.env.example
+
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Python Bytecode & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary & Scratch Testing Files
+scratch/
+test_*.pdf
+test_*.txt
+test_*.md
+debug_*.pdf
+debug_*.txt
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
