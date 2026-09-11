@@ -1,5 +1,7 @@
 import os
 # pyrefly: ignore [missing-import]
+import streamlit as st
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv, dotenv_values
 
 # Page Metadata
@@ -42,9 +44,33 @@ SUPPORTED_MODELS = [
 ]
 
 def resolve_api_key():
-    """Resolves Gemini API key from environment variables or .env file."""
-    load_dotenv(override=True)
-    
+    """
+    Resolves Gemini API key with priority:
+    1. Runtime custom key entered in UI (st.session_state.custom_api_key)
+    2. Streamlit Cloud Secrets (st.secrets["GEMINI_API_KEY"])
+    3. OS Environment variables (GEMINI_API_KEY or Career_Guidance_Chatbot)
+    4. Local .env file
+    """
+    # 1. Runtime UI Session Key
+    try:
+        if hasattr(st, "session_state") and st.session_state.get("custom_api_key"):
+            key = st.session_state.custom_api_key.strip()
+            if key:
+                return key
+    except Exception:
+        pass
+
+    # 2. Streamlit Cloud Secrets (for deployed apps on streamlit.app)
+    try:
+        if hasattr(st, "secrets"):
+            if "GEMINI_API_KEY" in st.secrets and str(st.secrets["GEMINI_API_KEY"]).strip():
+                return str(st.secrets["GEMINI_API_KEY"]).strip()
+            if "Career_Guidance_Chatbot" in st.secrets and str(st.secrets["Career_Guidance_Chatbot"]).strip():
+                return str(st.secrets["Career_Guidance_Chatbot"]).strip()
+    except Exception:
+        pass
+
+    # 3. Environment Variables
     key = os.getenv("GEMINI_API_KEY")
     if key and key.strip():
         return key.strip()
@@ -52,12 +78,17 @@ def resolve_api_key():
     key = os.getenv("Career_Guidance_Chatbot")
     if key and key.strip():
         return key.strip()
-        
-    env_vals = dotenv_values(".env")
-    if "GEMINI_API_KEY" in env_vals and env_vals["GEMINI_API_KEY"]:
-        return env_vals["GEMINI_API_KEY"].strip()
-        
-    if "Career_Guidance_Chatbot" in env_vals and env_vals["Career_Guidance_Chatbot"]:
-        return env_vals["Career_Guidance_Chatbot"].strip()
+
+    # 4. Local .env file
+    try:
+        load_dotenv(override=True)
+        env_vals = dotenv_values(".env")
+        if "GEMINI_API_KEY" in env_vals and env_vals["GEMINI_API_KEY"]:
+            return env_vals["GEMINI_API_KEY"].strip()
+            
+        if "Career_Guidance_Chatbot" in env_vals and env_vals["Career_Guidance_Chatbot"]:
+            return env_vals["Career_Guidance_Chatbot"].strip()
+    except Exception:
+        pass
         
     return ""

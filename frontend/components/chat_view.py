@@ -1,6 +1,7 @@
 # pyrefly: ignore [missing-import]
 import streamlit as st
 from frontend.styles import get_mascot_base64
+from config.settings import resolve_api_key
 from database.session_repo import (
     create_session,
     save_message,
@@ -15,6 +16,10 @@ from backend.ai_service import stream_chat_response
 
 def render_chat_view(detected_key: str):
     """Renders the Dedicated Chat View (GammaBot / Personal AI Buddy Mockup Style)."""
+    # Re-check key in case user entered it in session
+    if not detected_key:
+        detected_key = resolve_api_key()
+
     # 1. Chat App Header Bar
     ch_col1, ch_col2, ch_col3, ch_col4 = st.columns([0.20, 0.46, 0.16, 0.18])
     with ch_col1:
@@ -100,6 +105,33 @@ def render_chat_view(detected_key: str):
 
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
+    # Inline API Key Connection Card (Only shown if key is missing)
+    if not detected_key:
+        st.markdown("""
+        <div style="background: rgba(15, 21, 35, 0.85); border: 1px solid rgba(0, 210, 180, 0.35); border-radius: 18px; padding: 18px 20px; margin: 10px 0 16px 0;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span style="font-size: 1.4rem;">🔑</span>
+                <h3 style="color: #ffffff; margin: 0; font-size: 1.05rem; font-family: 'Outfit', sans-serif;">Connect Gemini API Key</h3>
+            </div>
+            <p style="color: #94a3b8; font-size: 0.82rem; margin: 0 0 12px 0; line-height: 1.4;">
+                To activate CareNex on this device, enter your Gemini API key below or configure <code>GEMINI_API_KEY</code> in Streamlit Secrets.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        c_k1, c_k2 = st.columns([0.72, 0.28])
+        with c_k1:
+            k_input = st.text_input("Gemini API Key:", type="password", placeholder="Paste API Key (AIzaSy...)", key="inline_chat_api_key", label_visibility="collapsed")
+        with c_k2:
+            if st.button("Connect ⚡", key="btn_connect_inline_key", use_container_width=True):
+                if k_input and k_input.strip():
+                    st.session_state.custom_api_key = k_input.strip()
+                    st.rerun()
+                else:
+                    st.warning("Please paste a valid key.")
+
+        st.markdown("<p style='font-size: 0.74rem; color: #64748b; margin-top: -6px; padding: 0 4px;'>Get a free key at <a href='https://aistudio.google.com/apikey' target='_blank' style='color: #00d2b4; text-decoration: none;'>Google AI Studio ↗</a>. Your key is stored in your browser session only.</p>", unsafe_allow_html=True)
+
     # 2. Render Interactive Empty Welcome Card (When No Messages)
     if not st.session_state.messages and not st.session_state.pending_prompt:
         st.markdown(f"""
@@ -164,8 +196,12 @@ def render_chat_view(detected_key: str):
         prompt_to_send = user_input
 
     if prompt_to_send:
+        # Re-resolve key
         if not detected_key:
-            st.error("⚠️ Please configure your Gemini API Key in `.env` or in Settings.")
+            detected_key = resolve_api_key()
+
+        if not detected_key:
+            st.warning("🔑 Please enter your Gemini API Key above to begin chatting.")
             st.stop()
 
         # Save user turn to state and MongoDB
